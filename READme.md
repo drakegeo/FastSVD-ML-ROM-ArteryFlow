@@ -26,11 +26,20 @@ The FastSVD-ML-ROM framework utilizes a multi-stage approach:
 
 ## Data
 
-The framework has been demonstrated on 3D blood flow simulations inside an arterial segment. The data directory contains:
+The framework has been demonstrated on 3D blood flow simulations inside an arterial segment. The `data/` directory contains high-fidelity model (HFM) data organized as follows:
 
-- High-fidelity simulation data
-- Multi-fidelity solution snapshots
-- Preprocessed datasets for training and validation
+### Training Data
+- **10 parameterized training datasets**: Each folder (e.g., `1_0.07_train`, `2_0.15_train`, etc.) contains 160 `.dat` files representing solution snapshots at different time steps
+- Training datasets cover various parameter configurations for learning the parameter-to-latent-space mapping
+
+### Test Data
+- **2 test datasets**: `10_0.5_test` and `11_0.42_test`, each containing 200 `.dat` files
+- Test datasets are used for validation and performance evaluation on unseen parameter configurations
+
+### Data Format
+- All data files are in `.dat` format containing high-fidelity simulation snapshots
+- The folder naming convention indicates different parameter sets (e.g., `1_0.07` represents parameter set 1 with value 0.07)
+- These HFM snapshots are used to train the convolutional autoencoders, feed-forward neural networks, and LSTM networks
 
 ## Environment
 

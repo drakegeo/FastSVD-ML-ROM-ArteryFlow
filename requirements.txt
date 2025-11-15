@@ -1,0 +1,18 @@
+# Core scientific computing
+numpy>=1.21.0
+scipy>=1.7.0
+
+# Data processing and utilities
+natsort>=8.0.0
+
+# Visualization
+matplotlib>=3.4.0
+
+# Deep Learning (for CAE, LSTM, FFNN)
+tensorflow>=2.8.0
+# Alternative: uncomment if using PyTorch instead
+# torch>=1.11.0
+# torchvision>=0.12.0
+
+# Optional but recommended for ML workflows
+scikit-learn>=1.0.0
