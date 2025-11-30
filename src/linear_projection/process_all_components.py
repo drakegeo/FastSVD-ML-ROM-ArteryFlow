@@ -1,9 +1,10 @@
 """
 Main script to process all velocity components (x, y, z) automatically.
 
-This is the primary entry point for linear projection/SVD processing.
+This is the primary entry point for POD basis calculation.
 It processes all three velocity components sequentially using TRAINING DATA ONLY
-and saves results to the data/ folder structure.
+and saves POD basis matrices to the data/ folder structure.
+Linear projection of data is done separately in another script.
 
 Usage:
     python src/linear_projection/process_all_components.py
@@ -58,10 +59,7 @@ def process_all_components():
         print("\nOutput files created:")
         print("  POD basis:")
         for comp in successful:
-            print(f"    - data/POD_basis/u{comp}.npy")
-        print("  Linear projected data:")
-        for comp in successful:
-            print(f"    - data/linear_projected/vel_snapshot_{comp}.npy")
+            print(f"    - data/POD_basis/Basis_u{comp}.npy")
         print("  SVD results:")
         for comp in successful:
             print(f"    - data/SVD_results/trunc_size_{comp}.npy")
