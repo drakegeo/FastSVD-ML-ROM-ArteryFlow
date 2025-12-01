@@ -45,7 +45,39 @@ The framework has been demonstrated on 3D blood flow simulations inside an arter
 
 ### Requirements
 
-Install the required dependencies:
+#### 1. Check CUDA Version
+
+First, verify your CUDA version to ensure compatibility:
+
+```bash
+nvidia-smi
+```
+
+This will display your CUDA version and GPU information. The framework has been tested with CUDA 11.8.
+
+#### 2. Install PyTorch with CUDA Support
+
+Install PyTorch and torchvision with CUDA 11.8 support:
+
+```bash
+pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118 --no-cache-dir
+```
+
+The `--no-cache-dir` flag is recommended to avoid memory issues during installation.
+
+**Verify PyTorch CUDA installation:**
+
+```python
+import torch
+print(f"PyTorch version: {torch.__version__}")
+print(f"CUDA available: {torch.cuda.is_available()}")
+print(f"CUDA version: {torch.version.cuda}")
+print(f"GPU device: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'N/A'}")
+```
+
+#### 3. Install Other Dependencies
+
+Install the remaining required dependencies:
 
 ```bash
 pip install -r requirements.txt
@@ -54,9 +86,11 @@ pip install -r requirements.txt
 ### Setup
 
 1. Clone the repository
-2. Install dependencies from `requirements.txt`
-3. Prepare your data in the `data/` directory
-4. Configure the model parameters as needed
+2. Check your CUDA version using `nvidia-smi`
+3. Install PyTorch with CUDA support (see above)
+4. Install dependencies from `requirements.txt`
+5. Prepare your data in the `data/` directory
+6. Configure the model parameters as needed
 
 ## Usage
 

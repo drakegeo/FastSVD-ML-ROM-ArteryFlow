@@ -1,191 +1,309 @@
-# George Drakoulas - 170222
-# Construct the CAE_2D DL_ model
+"""
+CAE-2D Training Script
 
-# hide messages
-import warnings
-warnings.filterwarnings("ignore")
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+This script trains a 2D Convolutional Autoencoder for nonlinear dimensionality
+reduction of POD-projected velocity field data.
+"""
+import sys
+from pathlib import Path
 
-# George Drakoulas - 170222
-# Construct the CAE_2D main algorithm
-
-# libraries
-import matplotlib.pyplot as plt
-from libraries_plot import *
-from useful_func import Reshape_, Standarization,Normalization
-from DL_parameters import config
 import numpy as np
-from CAE_model import *
-#DL libraries
-from tensorflow.keras import  optimizers
-from tensorflow.keras.callbacks import EarlyStopping,ModelCheckpoint
-import pandas as pd
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
 
-filepath = './train_ux_POD'
-name_sim = []
-for file in os.listdir(filepath):
-    print(file)
+# Add project root to path
+project_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(project_root))
 
-# 1. CAE_2D_params
-lr_rate=config['lr_CAE_2D']
-batch_size=config['batch_CAE_2D']
-epochs=config['epochs_CAE_2D']
-
-########## x-axis
-data_x=np.load('./fnl_snapshot/vel_snapshot_x.npy')
-print(np.shape(data_x))
-
-print(data_x.shape)
-fnl_mat_x = data_x[0][:][:]
-for i in range(1, np.shape(data_x)[0]):
-    fnl_mat_x = np.append(fnl_mat_x, data_x[i][:][:], axis=1)
-print(fnl_mat_x.shape)
-
-# 3. Data Standardization
-stand_data_x= Standarization(fnl_mat_x)
-stdmean=stand_data_x.param()
-np.save('./scaling_data/stdmean_x_CAE2D.npy',stdmean)
-scale_snapshot_x=stand_data_x.stand().T
-print(scale_snapshot_x.shape)
-quit()
-# reshape the scaled snapshot
-res_data_x = []
-for i in range(1600):
-    re_x = scale_snapshot_x[i,:].reshape(16,16)
-    res_data_x.append(re_x)
+from src.config import config
+from src.nonlinear_reduction.CAE_model import build_cae_2d, get_device
+from src.nonlinear_reduction.load_data import load_and_prepare_cae_data
 
 
-########## y-axis
-data_y=np.load('./fnl_snapshot/vel_snapshot_y.npy')
-
-print(data_y.shape)
-fnl_mat_y = data_y[0][:][:]
-for i in range(1, np.shape(data_y)[0]):
-    fnl_mat_y = np.append(fnl_mat_y, data_y[i][:][:], axis=1)
-print(fnl_mat_y.shape)
-
-# 3. Data Standardization
-stand_data_y= Standarization(fnl_mat_y)
-stdmean=stand_data_y.param()
-np.save('./scaling_data/stdmean_y_CAE2D.npy',stdmean)
-scale_snapshot_y=stand_data_y.stand().T
-print(scale_snapshot_y.shape)
-
-# reshape the scaled snapshot
-res_data_y = []
-for i in range(1600):
-    re_y = scale_snapshot_y[i,:].reshape(16,16)
-    res_data_y.append(re_y)
-
-########## z-axis
-data_z=np.load('./fnl_snapshot/vel_snapshot_z.npy') #
-
-print(data_z.shape)
-fnl_mat_z = data_z[0][:][:]
-for i in range(1, np.shape(data_z)[0]):
-    fnl_mat_z = np.append(fnl_mat_z, data_z[i][:][:], axis=1)
-print(fnl_mat_z.shape)
-
-# 3. Data Standardization
-stand_data_z= Standarization(fnl_mat_z) #USE NORMALIZATION
-stdmean=stand_data_z.param()
-np.save('./scaling_data/stdmean_z_CAE2D.npy',stdmean)
-scale_snapshot_z=stand_data_z.stand().T
-print(scale_snapshot_z.shape)
+def standardize_data(data, mean=None, std=None):
+    """
+    Standardize data using mean and standard deviation.
+    
+    Parameters:
+    -----------
+    data : np.ndarray
+        Input data to standardize
+    mean : np.ndarray, optional
+        Mean for standardization. If None, computed from data.
+    std : np.ndarray, optional
+        Standard deviation for standardization. If None, computed from data.
+    
+    Returns:
+    --------
+    tuple : (standardized_data, mean, std)
+    """
+    if mean is None:
+        mean = np.mean(data, axis=0, keepdims=True)
+    if std is None:
+        std = np.std(data, axis=0, keepdims=True)
+        # Avoid division by zero
+        std = np.where(std == 0, 1.0, std)
+    
+    standardized = (data - mean) / std
+    return standardized, mean, std
 
 
-# reshape the scaled snapshot
-res_data_z = []
-for i in range(1600):
-    re_z = scale_snapshot_z[i,:].reshape(16,16)
-    res_data_z.append(re_z)
-
-print(np.shape(res_data_z))
-
-### final matrix construction
-final_mat = np.stack([res_data_x,res_data_y,res_data_z],3)
-print(final_mat.shape)
-
-fig, ax = plt.subplots(3)
-ax[0].plot(final_mat[:160,2,2,0])
-ax[1].plot(final_mat[:160,2,2,1])
-ax[2].plot(final_mat[:160,2,2,2])
-
-ax[0].plot(final_mat[160:2*160,2,2,0])
-ax[1].plot(final_mat[160:2*160,2,2,1])
-ax[2].plot(final_mat[160:2*160,2,2,2])
-
-ax[0].plot(final_mat[2*160:3*160,2,2,0])
-ax[1].plot(final_mat[2*160:3*160,2,2,1])
-ax[2].plot(final_mat[2*160:3*160,2,2,2])
-
-ax[0].plot(final_mat[3*160:4*160,2,2,0])
-ax[1].plot(final_mat[3*160:4*160,2,2,1])
-ax[2].plot(final_mat[3*160:4*160,2,2,2])
-
-ax[0].plot(final_mat[4*160:5*160,2,2,0])
-ax[1].plot(final_mat[4*160:5*160,2,2,1])
-ax[2].plot(final_mat[4*160:5*160,2,2,2])
-
-ax[0].plot(final_mat[6*160:7*160,2,2,0])
-ax[1].plot(final_mat[6*160:7*160,2,2,1])
-ax[2].plot(final_mat[6*160:7*160,2,2,2])
-
-ax[0].plot(final_mat[7*160:8*160,2,2,0])
-ax[1].plot(final_mat[7*160:8*160,2,2,1])
-ax[2].plot(final_mat[7*160:8*160,2,2,2])
-
-
-ax[0].plot(final_mat[8*160:9*160,2,2,0])
-ax[1].plot(final_mat[8*160:9*160,2,2,1])
-ax[2].plot(final_mat[8*160:9*160,2,2,2])
-
-plt.show()
-
-# 5.  Design the CAE_2D network
-weights_filepath='./DL_weights/weights_CAE2D.h5'
-my_adam = optimizers.Adam(lr=lr_rate, beta_1=0.9, beta_2=0.999, epsilon=None, decay=0.0, amsgrad=False) #optimizer
-# Save the weights only if the validation loss reduces from previous best
-checkpoint = ModelCheckpoint(weights_filepath, monitor='val_loss', verbose=1, save_best_only=True, mode='min',
-                            save_weights_only=True)
-
-# Use an early-stopping criterion for preventing overfitting on training data
-earlystopping = EarlyStopping(monitor='val_loss',  patience=50, verbose=1)
-callbacks_list = [checkpoint, earlystopping]
-
-# 5. Fit the network
-model.compile(optimizer=my_adam, loss='mean_squared_error')  # Use a simple L-2 norm for training the autoencoder
-model.summary()
-
-# 6. Train the network
-with tf.device('/gpu:0'):
-    train_history = model.fit(x=final_mat,
-                              y=final_mat,
-                              epochs=25000, batch_size=32, # increase epochs to 50000
-                               validation_split=0.1,callbacks=None)
-    encoder.save_weights('./DL_weights/enc_CAE2D.h5')
-    decoder.save_weights('./DL_weights/dec_CAE2D.h5')
-
-# 7. save the DL_trained data to DL_dat folder
-decoded_data=decoder.predict(encoder.predict(final_mat))
-encoded_data=encoder(final_mat)
-
-np.save('./DL_data/CAE2D_dec.npy',decoded_data)
-np.save('./DL_data/CAE2D_enc.npy',encoded_data)
-
-# 8. save the results in a csv file
-df_results=pd.DataFrame(train_history.history)
-df_results['epoch']=train_history.epoch
-df_results.to_csv(path_or_buf='./results_csv/CAE_2D.csv',index=False)
-
-# "Loss"
-plt.plot(train_history.history['loss'], )
-plt.plot(train_history.history['val_loss'])
-plt.title('$model loss$')
-plt.ylabel('$loss$')
-plt.xlabel('$epoch$')
-plt.legend(['$train$', '$validation$'], loc='upper left')
-plt.show()
+def train_epoch(model, dataloader, criterion, optimizer, device):
+    """
+    Train for one epoch.
+    
+    Parameters:
+    -----------
+    model : nn.Module
+        PyTorch model
+    dataloader : DataLoader
+        Training data loader
+    criterion : nn.Module
+        Loss function
+    optimizer : optim.Optimizer
+        Optimizer
+    device : torch.device
+        Device to use
+    
+    Returns:
+    --------
+    float : Average training loss
+    """
+    model.train()
+    total_loss = 0.0
+    num_batches = 0
+    
+    for batch_data in dataloader:
+        inputs = batch_data[0].to(device)
+        
+        # Zero gradients
+        optimizer.zero_grad()
+        
+        # Forward pass
+        outputs = model(inputs)
+        
+        # Compute loss
+        loss = criterion(outputs, inputs)
+        
+        # Backward pass
+        loss.backward()
+        optimizer.step()
+        
+        total_loss += loss.item()
+        num_batches += 1
+    
+    return total_loss / num_batches if num_batches > 0 else 0.0
 
 
+def validate(model, dataloader, criterion, device):
+    """
+    Validate the model.
+    
+    Parameters:
+    -----------
+    model : nn.Module
+        PyTorch model
+    dataloader : DataLoader
+        Validation data loader
+    criterion : nn.Module
+        Loss function
+    device : torch.device
+        Device to use
+    
+    Returns:
+    --------
+    float : Average validation loss
+    """
+    model.eval()
+    total_loss = 0.0
+    num_batches = 0
+    
+    with torch.no_grad():
+        for batch_data in dataloader:
+            inputs = batch_data[0].to(device)
+            
+            # Forward pass
+            outputs = model(inputs)
+            
+            # Compute loss
+            loss = criterion(outputs, inputs)
+            
+            total_loss += loss.item()
+            num_batches += 1
+    
+    return total_loss / num_batches if num_batches > 0 else 0.0
+
+
+def main():
+    """Main training function."""
+    # Get device
+    device = get_device()
+    
+    # Get parameters from config
+    lr = config['lr_CAE_2D']
+    batch_size = config['batch_CAE_2D']
+    epochs = config['epochs_CAE_2D']
+    latent_dim = config['latent_CAE_2D']
+    val_split = config.get('val_split_CAE_2D', 0.1)
+    spatial_shape = config.get('spatial_shape_CAE_2D', (16, 16))
+    
+    print("=" * 60)
+    print("CAE-2D Training")
+    print("=" * 60)
+    print(f"Learning rate: {lr}")
+    print(f"Batch size: {batch_size}")
+    print(f"Epochs: {epochs}")
+    print(f"Latent dimension: {latent_dim}")
+    print(f"Validation split: {val_split}")
+    print(f"Spatial shape: {spatial_shape}")
+    print("=" * 60)
+    
+    # Load and prepare training data
+    print("\nLoading training data...")
+    train_data, val_data = load_and_prepare_cae_data(
+        data_type='train',
+        spatial_shape=spatial_shape,
+        val_split=val_split,
+        random_seed=42
+    )
+    
+    print(f"Training data shape: {train_data.shape}")
+    print(f"Validation data shape: {val_data.shape}")
+    
+    # Standardize data
+    print("\nStandardizing data...")
+    train_data_std, train_mean, train_std = standardize_data(train_data)
+    val_data_std = (val_data - train_mean) / train_std
+    
+    # Save standardization parameters
+    output_dir = project_root / 'output' / 'scaling_data'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    np.save(output_dir / 'stdmean_CAE2D.npy', {'mean': train_mean, 'std': train_std})
+    print(f"Saved standardization parameters to {output_dir / 'stdmean_CAE2D.npy'}")
+    
+    # Convert to PyTorch tensors and reshape for Conv2D: (N, H, W, C) -> (N, C, H, W)
+    train_tensor = torch.FloatTensor(train_data_std).permute(0, 3, 1, 2)
+    val_tensor = torch.FloatTensor(val_data_std).permute(0, 3, 1, 2)
+    
+    # Create data loaders
+    train_dataset = TensorDataset(train_tensor, train_tensor)
+    val_dataset = TensorDataset(val_tensor, val_tensor)
+    
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+    
+    # Build model
+    print("\nBuilding CAE-2D model...")
+    model, encoder, decoder, device = build_cae_2d(latent_dim=latent_dim, device=device)
+    
+    # Print model summary
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total parameters: {total_params:,}")
+    print(f"Trainable parameters: {trainable_params:,}")
+    
+    # Loss and optimizer
+    criterion = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    
+    # Training history
+    train_losses = []
+    val_losses = []
+    best_val_loss = float('inf')
+    patience_counter = 0
+    patience = 50
+    
+    # Create output directories
+    weights_dir = project_root / 'output' / 'DL_weights'
+    weights_dir.mkdir(parents=True, exist_ok=True)
+    data_dir = project_root / 'output' / 'DL_data'
+    data_dir.mkdir(parents=True, exist_ok=True)
+    
+    print("\nStarting training...")
+    print("-" * 60)
+    
+    # Training loop
+    for epoch in range(epochs):
+        # Train
+        train_loss = train_epoch(model, train_loader, criterion, optimizer, device)
+        train_losses.append(train_loss)
+        
+        # Validate
+        val_loss = validate(model, val_loader, criterion, device)
+        val_losses.append(val_loss)
+        
+        # Print progress
+        if (epoch + 1) % 10 == 0 or epoch == 0:
+            print(f"Epoch [{epoch+1}/{epochs}] - Train Loss: {train_loss:.6f}, Val Loss: {val_loss:.6f}")
+        
+        # Save best model
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            patience_counter = 0
+            
+            # Save model weights
+            torch.save(model.state_dict(), weights_dir / 'weights_CAE2D.pth')
+            torch.save(encoder.state_dict(), weights_dir / 'enc_CAE2D.pth')
+            torch.save(decoder.state_dict(), weights_dir / 'dec_CAE2D.pth')
+        else:
+            patience_counter += 1
+        
+        # Early stopping
+        if patience_counter >= patience:
+            print(f"\nEarly stopping at epoch {epoch+1}")
+            break
+    
+    print("-" * 60)
+    print(f"Training completed. Best validation loss: {best_val_loss:.6f}")
+    
+    # Load best model
+    model.load_state_dict(torch.load(weights_dir / 'weights_CAE2D.pth'))
+    encoder.load_state_dict(torch.load(weights_dir / 'enc_CAE2D.pth'))
+    decoder.load_state_dict(torch.load(weights_dir / 'dec_CAE2D.pth'))
+    
+    # Generate encoded and decoded data for all training data
+    print("\nGenerating encoded and decoded data...")
+    model.eval()
+    with torch.no_grad():
+        # Process in batches to avoid memory issues
+        all_encoded = []
+        all_decoded = []
+        
+        for batch_data in train_loader:
+            inputs = batch_data[0].to(device)
+            encoded = encoder(inputs)
+            decoded = decoder(encoded)
+            
+            all_encoded.append(encoded.cpu().numpy())
+            all_decoded.append(decoded.cpu().numpy())
+        
+        encoded_data = np.concatenate(all_encoded, axis=0)
+        decoded_data = np.concatenate(all_decoded, axis=0)
+    
+    # Save encoded and decoded data
+    np.save(data_dir / 'CAE2D_enc.npy', encoded_data)
+    np.save(data_dir / 'CAE2D_dec.npy', decoded_data)
+    print(f"Saved encoded data: {data_dir / 'CAE2D_enc.npy'}")
+    print(f"Saved decoded data: {data_dir / 'CAE2D_dec.npy'}")
+    
+    # Save training history
+    history = {
+        'train_loss': train_losses,
+        'val_loss': val_losses,
+        'epochs': list(range(1, len(train_losses) + 1))
+    }
+    
+    import json
+    history_file = project_root / 'output' / 'results_csv' / 'CAE_2D.json'
+    history_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(history_file, 'w') as f:
+        json.dump(history, f, indent=2)
+    print(f"Saved training history: {history_file}")
+    
+    print("\nTraining complete!")
+
+
+if __name__ == '__main__':
+    main()
