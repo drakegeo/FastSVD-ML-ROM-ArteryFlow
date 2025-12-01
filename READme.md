@@ -26,7 +26,9 @@ The FastSVD-ML-ROM framework utilizes a multi-stage approach:
 
 ## Data
 
-The framework has been demonstrated on 3D blood flow simulations inside an arterial segment. The `data/` directory contains high-fidelity model (HFM) data organized as follows:
+**Note:** The training and test data for this project are not included in the repository. To obtain the data, please contact the repository maintainer. Once you receive the data, place it in the `data/` directory following the structure described below.
+
+The framework has been demonstrated on 3D blood flow simulations inside an arterial segment. The `data/` directory should contain high-fidelity model (HFM) data organized as follows:
 
 ### Training Data
 - **10 parameterized training datasets**: Each folder (e.g., `1_0.07_train`, `2_0.15_train`, etc.) contains 160 `.dat` files representing solution snapshots at different time steps
@@ -89,8 +91,8 @@ pip install -r requirements.txt
 2. Check your CUDA version using `nvidia-smi`
 3. Install PyTorch with CUDA support (see above)
 4. Install dependencies from `requirements.txt`
-5. Prepare your data in the `data/` directory
-6. Configure the model parameters as needed
+5. **Request the training and test data from the repository maintainer and place it in the `data/` directory**
+6. Configure the model parameters as needed in `src/config.py`
 
 ## Usage
 
