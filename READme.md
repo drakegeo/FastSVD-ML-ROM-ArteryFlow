@@ -94,7 +94,47 @@ pip install -r requirements.txt
 
 ## Usage
 
-[Add usage instructions here]
+### 1. Linear Projection (SVD)
+
+First, perform SVD-based linear projection on your high-fidelity simulation data:
+
+```bash
+python src/linear_projection/process_all_components.py
+```
+
+This generates projected data in `data/linear_projected/` organized by component (ux, uy, uz) and data type (train/test).
+
+### 2. CAE-2D Training
+
+Train the 2D Convolutional Autoencoder for nonlinear dimensionality reduction:
+
+```bash
+python src/nonlinear_reduction/CAE_main.py
+```
+
+**Configuration:**
+- Edit `src/config.py` to adjust training parameters:
+  - `lr_CAE_2D`: Learning rate (default: 0.0005)
+  - `batch_CAE_2D`: Batch size (default: 20)
+  - `epochs_CAE_2D`: Number of epochs (default: 2000)
+  - `latent_CAE_2D`: Latent space dimension (default: 4)
+  - `val_split_CAE_2D`: Validation split ratio (default: 0.1)
+
+**Outputs:**
+The training script saves the following in `src/nonlinear_reduction/`:
+- `DL_weights/weights_CAE2D.pth`: Full model weights
+- `DL_weights/enc_CAE2D.pth`: Encoder weights
+- `DL_weights/dec_CAE2D.pth`: Decoder weights
+- `DL_data/CAE2D_enc.npy`: Encoded latent representations
+- `DL_data/CAE2D_dec.npy`: Decoded reconstructions
+- `scaling_data/stdmean_CAE2D.npy`: Data standardization parameters
+- `results_csv/CAE_2D.json`: Training history (losses per epoch)
+
+**Features:**
+- Automatic CUDA/CPU device detection
+- Early stopping (patience: 50 epochs)
+- Model checkpointing (saves best model based on validation loss)
+- Random train/validation split with reproducible shuffling
 
 ## Results
 

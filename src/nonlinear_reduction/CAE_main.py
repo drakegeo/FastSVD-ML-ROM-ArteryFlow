@@ -177,11 +177,14 @@ def main():
     train_data_std, train_mean, train_std = standardize_data(train_data)
     val_data_std = (val_data - train_mean) / train_std
     
+    # Define output directory (nonlinear_reduction folder)
+    nonlinear_reduction_dir = Path(__file__).parent
+    
     # Save standardization parameters
-    output_dir = project_root / 'output' / 'scaling_data'
-    output_dir.mkdir(parents=True, exist_ok=True)
-    np.save(output_dir / 'stdmean_CAE2D.npy', {'mean': train_mean, 'std': train_std})
-    print(f"Saved standardization parameters to {output_dir / 'stdmean_CAE2D.npy'}")
+    scaling_dir = nonlinear_reduction_dir / 'scaling_data'
+    scaling_dir.mkdir(parents=True, exist_ok=True)
+    np.save(scaling_dir / 'stdmean_CAE2D.npy', {'mean': train_mean, 'std': train_std})
+    print(f"Saved standardization parameters to {scaling_dir / 'stdmean_CAE2D.npy'}")
     
     # Convert to PyTorch tensors and reshape for Conv2D: (N, H, W, C) -> (N, C, H, W)
     train_tensor = torch.FloatTensor(train_data_std).permute(0, 3, 1, 2)
@@ -215,10 +218,10 @@ def main():
     patience_counter = 0
     patience = 50
     
-    # Create output directories
-    weights_dir = project_root / 'output' / 'DL_weights'
+    # Create output directories in nonlinear_reduction folder
+    weights_dir = nonlinear_reduction_dir / 'DL_weights'
     weights_dir.mkdir(parents=True, exist_ok=True)
-    data_dir = project_root / 'output' / 'DL_data'
+    data_dir = nonlinear_reduction_dir / 'DL_data'
     data_dir.mkdir(parents=True, exist_ok=True)
     
     print("\nStarting training...")
@@ -296,8 +299,9 @@ def main():
     }
     
     import json
-    history_file = project_root / 'output' / 'results_csv' / 'CAE_2D.json'
-    history_file.parent.mkdir(parents=True, exist_ok=True)
+    results_dir = nonlinear_reduction_dir / 'results_csv'
+    results_dir.mkdir(parents=True, exist_ok=True)
+    history_file = results_dir / 'CAE_2D.json'
     with open(history_file, 'w') as f:
         json.dump(history, f, indent=2)
     print(f"Saved training history: {history_file}")
