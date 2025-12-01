@@ -121,7 +121,7 @@ python src/nonlinear_reduction/CAE_main.py
   - `val_split_CAE_2D`: Validation split ratio (default: 0.1)
 
 **Outputs:**
-The training script saves the following in `src/nonlinear_reduction/`:
+The training script saves the following in `src/nonlinear_reduction/output/`:
 - `DL_weights/weights_CAE2D.pth`: Full model weights
 - `DL_weights/enc_CAE2D.pth`: Encoder weights
 - `DL_weights/dec_CAE2D.pth`: Decoder weights

@@ -177,11 +177,12 @@ def main():
     train_data_std, train_mean, train_std = standardize_data(train_data)
     val_data_std = (val_data - train_mean) / train_std
     
-    # Define output directory (nonlinear_reduction folder)
+    # Define output directory (nonlinear_reduction/output folder)
     nonlinear_reduction_dir = Path(__file__).parent
+    output_dir = nonlinear_reduction_dir / 'output'
     
     # Save standardization parameters
-    scaling_dir = nonlinear_reduction_dir / 'scaling_data'
+    scaling_dir = output_dir / 'scaling_data'
     scaling_dir.mkdir(parents=True, exist_ok=True)
     np.save(scaling_dir / 'stdmean_CAE2D.npy', {'mean': train_mean, 'std': train_std})
     print(f"Saved standardization parameters to {scaling_dir / 'stdmean_CAE2D.npy'}")
@@ -218,10 +219,10 @@ def main():
     patience_counter = 0
     patience = 50
     
-    # Create output directories in nonlinear_reduction folder
-    weights_dir = nonlinear_reduction_dir / 'DL_weights'
+    # Create output directories in nonlinear_reduction/output folder
+    weights_dir = output_dir / 'DL_weights'
     weights_dir.mkdir(parents=True, exist_ok=True)
-    data_dir = nonlinear_reduction_dir / 'DL_data'
+    data_dir = output_dir / 'DL_data'
     data_dir.mkdir(parents=True, exist_ok=True)
     
     print("\nStarting training...")
@@ -299,7 +300,7 @@ def main():
     }
     
     import json
-    results_dir = nonlinear_reduction_dir / 'results_csv'
+    results_dir = output_dir / 'results_csv'
     results_dir.mkdir(parents=True, exist_ok=True)
     history_file = results_dir / 'CAE_2D.json'
     with open(history_file, 'w') as f:
