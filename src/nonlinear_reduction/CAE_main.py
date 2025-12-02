@@ -292,6 +292,52 @@ def main():
     print(f"Saved encoded data: {data_dir / 'CAE2D_enc.npy'}")
     print(f"Saved decoded data: {data_dir / 'CAE2D_dec.npy'}")
     
+    # Also encode test data for LSTM evaluation
+    print("\nEncoding test data...")
+    try:
+        test_data = load_and_prepare_cae_data(
+            data_type='test',
+            spatial_shape=spatial_shape,
+            val_split=0.0,  # No validation split for test data
+            random_seed=42
+        )
+        
+        print(f"Test data shape: {test_data.shape}")
+        
+        # Standardize test data using training statistics
+        test_data_std = (test_data - train_mean) / train_std
+        
+        # Convert to PyTorch tensor and reshape
+        test_tensor = torch.FloatTensor(test_data_std).permute(0, 3, 1, 2)
+        test_dataset = TensorDataset(test_tensor, test_tensor)
+        test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+        
+        # Encode test data
+        model.eval()
+        with torch.no_grad():
+            test_encoded = []
+            test_decoded = []
+            
+            for batch_data in test_loader:
+                inputs = batch_data[0].to(device)
+                encoded = encoder(inputs)
+                decoded = decoder(encoded)
+                
+                test_encoded.append(encoded.cpu().numpy())
+                test_decoded.append(decoded.cpu().numpy())
+            
+            test_encoded_data = np.concatenate(test_encoded, axis=0)
+            test_decoded_data = np.concatenate(test_decoded, axis=0)
+        
+        # Save test encoded and decoded data
+        np.save(data_dir / 'CAE2D_enc_test.npy', test_encoded_data)
+        np.save(data_dir / 'CAE2D_dec_test.npy', test_decoded_data)
+        print(f"Saved test encoded data: {data_dir / 'CAE2D_enc_test.npy'}")
+        print(f"Saved test decoded data: {data_dir / 'CAE2D_dec_test.npy'}")
+    except Exception as e:
+        print(f"Warning: Could not encode test data: {e}")
+        print("Test data encoding skipped. You can run LSTM_test.py later after ensuring test data is available.")
+    
     # Save training history
     history = {
         'train_loss': train_losses,
